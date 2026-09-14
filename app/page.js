@@ -5,13 +5,16 @@ import { useRef, useState, useEffect } from 'react';
 import React from 'react';
 
 let CHAR_LIMIT = 20;
+const TOOLBAR_MIN_SIZE = 300;
+const TOOLBAR_MAX_SIZE = 450;
+
 
 export default function PixelArtPage() {
   const [layers, setLayers] = useState([
     { id: 1, name: 'Layer 1', visible: true }
   ]);
 
-  const [toolbarWidth, setToolbarWidth] = useState(220);
+  const [toolbarWidth, setToolbarWidth] = useState(TOOLBAR_MIN_SIZE);
   const isResizing = useRef(false);
 
   const [activeLayer, setActiveLayer] = useState(0);
@@ -22,6 +25,9 @@ export default function PixelArtPage() {
   const [lastPos, setLastPos] = useState(null);
 
   const canvasRefs = useRef([]);
+
+  const previewCanvasRef = useRef(null);
+  const [mousePos, setMousePos] = useState(null);
 
   // --- Toolbar resizing ---
   const startResize = () => {
@@ -36,8 +42,8 @@ export default function PixelArtPage() {
 
   const handleResize = (e) => {
     if (!isResizing.current) return;
-    const newWidth = Math.max(150, e.clientX);
-    setToolbarWidth(newWidth);
+    const newWidth = Math.max(TOOLBAR_MIN_SIZE, e.clientX);
+    setToolbarWidth(Math.min(newWidth,TOOLBAR_MAX_SIZE));
   };
 
   useEffect(() => {
@@ -49,8 +55,23 @@ export default function PixelArtPage() {
     };
   }, []);
 
+  useEffect(() => {
+  const previewCtx = previewCanvasRef.current.getContext('2d');
+  previewCtx.clearRect(0, 0, previewCanvasRef.current.width, previewCanvasRef.current.height);
+
+  if (mousePos) {
+    previewCtx.beginPath();
+    previewCtx.arc(mousePos.x, mousePos.y, brushSize / 2, 0, Math.PI * 2);
+    previewCtx.strokeStyle = 'rgba(0,0,0,0.5)'; // faint outline
+    previewCtx.lineWidth = 1;
+    previewCtx.stroke();
+  }
+}, [mousePos, brushSize]);
+
+
   // --- Drawing ---
   const startDrawing = (e, layerIndex) => {
+    setMousePos(null); // hide preview while drawing
     if (layerIndex !== activeLayer) return;
     if (!layers[layerIndex].visible) return; // still block hidden layers
     setIsDrawing(true);
@@ -59,6 +80,7 @@ export default function PixelArtPage() {
   };
 
   const stopDrawing = () => {
+    setMousePos(null); // hide preview when mouse leaves or stops
     setIsDrawing(false);
     setLastPos(null);
   };
@@ -155,6 +177,25 @@ export default function PixelArtPage() {
     setLayers(copyListItems);
   };
 
+  const handleMouseMovePreview = (e) => {
+  const rect = previewCanvasRef.current.getBoundingClientRect();
+  setMousePos({
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  });
+};
+
+
+const handleMouseDown = (e) => {
+    setDragging(true);
+    setOffset({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y
+    });
+  };
+
+
+
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
       {/* Toolbar */}
@@ -213,6 +254,7 @@ export default function PixelArtPage() {
         <button onClick={addLayer} disabled={layers.length >= 10}>
           ➕ Add Layer
         </button>
+
         <ul style={{ listStyle: 'none', padding: 0 }}>
       {layers.map((layer, index) => (
         <li
@@ -280,6 +322,7 @@ export default function PixelArtPage() {
         }}>
       <div style={{ position: 'relative', flex: 1 }}>
         
+      {/* Layer Canvases */}
       {[...layers].map((layer, index) => (
         <canvas
           key={layer.id}
@@ -292,15 +335,32 @@ export default function PixelArtPage() {
             left: 0,
             zIndex: index,
             display: layer.visible ? 'block' : 'none',
-            pointerEvents: index === activeLayer ? 'auto' : 'none' // ✅ only selected layer is clickable
+            pointerEvents: index === activeLayer ? 'auto' : 'none' // only selected layer is clickable
           }}
           onMouseDown={(e) => startDrawing(e, index)}
-          onMouseMove={(e) => draw(e, index)}
+          onMouseMove={(e) => {
+            draw(e, index);
+            if (index === activeLayer && !isDrawing) handleMouseMovePreview(e);
+          }}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
         />
       ))}
     </div>
+
+     {/* Brush preview overlay */}
+      <canvas
+        ref={(el) => (previewCanvasRef.current = el)}
+        width={800}
+        height={500}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: layers.length + 1,
+          pointerEvents: 'none' // so it doesn't block drawing
+        }}
+      />
 
 
       </div>
