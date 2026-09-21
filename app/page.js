@@ -12,7 +12,7 @@ const TOOLBAR_MAX_SIZE = 450;
 
 export default function PixelArtPage() {
   // --- Layer Variables ---
-  const [layers, setLayers] = useState([{ id: 1, name: 'Layer 1', visible: true }]);
+  const [layers, setLayers] = useState([{ id: 1, name: 'Layer 1', visible: true, ref: useRef(null)}]);
 
   // --- Toolbar Resizing Variables ---
   const [toolbarWidth, setToolbarWidth] = useState(TOOLBAR_MIN_SIZE);
@@ -27,6 +27,9 @@ export default function PixelArtPage() {
   const [lastPos, setLastPos] = useState(null);
 
   const canvasRefs = useRef([]);
+  const dragItem = useRef();
+  const dragOverItem = useRef();
+  const [isDragging, setDragging] = useState(false);
 
 // --- Circle Preview Brush Size ---
   const previewCanvasRef = useRef(null);
@@ -37,6 +40,10 @@ export default function PixelArtPage() {
   const ctxRef = useRef(null);
   const [frames, setFrames] = useState([]);
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
+
+// --- Undo/Redo Button Functionality ---
+  const [strokes, setStrokes] = useState([]); // Array of strokes
+  const [currentStroke, setCurrentStroke] = useState([]);
 
 
 {/* 
@@ -63,60 +70,67 @@ export default function PixelArtPage() {
     setToolbarWidth(Math.min(newWidth,TOOLBAR_MAX_SIZE));
   };
 
-  // --- Drawing ---
-  const startDrawing = (e, layerIndex) => {
-    setMousePos(null); // hide preview while drawing
-    if (layerIndex !== activeLayer) return;
-    if (!layers[layerIndex].visible) return; // still block hidden layers
-    setIsDrawing(true);
-    const rect = canvasRefs.current[layerIndex].getBoundingClientRect();
-    setLastPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  };
+// --- Drawing Functions ---
+const startDrawing = (e, layerIndex) => {
+  setMousePos(null);
+  if (layerIndex !== activeLayer) return;
+  if (!layers[layerIndex].visible) return;
 
-  const stopDrawing = () => {
-    setMousePos(null); // hide preview when mouse leaves or stops
-    setIsDrawing(false);
-    setLastPos(null);
+  setIsDrawing(true);
 
-    // Save current frame state (animation)
-    const canvas = canvasRef.current;
-    const newFrames = [...frames];
+  const rect = canvasRefs.current[layerIndex].getBoundingClientRect();
+  const startPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  setLastPos(startPos);
+  setCurrentStroke([startPos]); // Start a new stroke
+};
 
-    // Prevent null errors
-    if (!canvas || !ctx) return;
 
-    newFrames[currentFrameIndex] = ctxRef.current.getImageData(0, 0, canvas.width, canvas.height);
-    setFrames(newFrames);
-  };
+const draw = (e, layerIndex) => {
+  if (!isDrawing || layerIndex !== activeLayer || !layers[layerIndex].visible) return;
 
-  const draw = (e, layerIndex) => {
-    // Only draw/erase on the active layer
-    if (!isDrawing || layerIndex !== activeLayer || !layers[layerIndex].visible) return;
+  // Add point to current stroke
+  setCurrentStroke(prev => [...prev, newPos]);
 
-    const ctx = canvasRefs.current[layerIndex].getContext('2d');
-    ctx.lineWidth = brushSize;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+  // Live preview drawing
+  const ctx = canvasRefs.current[layerIndex].getContext('2d');
+  ctx.lineWidth = brushSize;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = color;
+  ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
 
-    if (tool === 'eraser') {
-      ctx.globalCompositeOperation = 'destination-out'; // erase pixels
-    } else {
-      ctx.globalCompositeOperation = 'source-over'; // normal drawing
-      ctx.strokeStyle = color;
-    }
+  ctx.beginPath();
+  ctx.moveTo(lastPos.x, lastPos.y);
 
-    ctx.beginPath();
-    ctx.moveTo(lastPos.x, lastPos.y);
+  const rect = canvasRefs.current[layerIndex].getBoundingClientRect();
+  const newPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 
-    const rect = canvasRefs.current[layerIndex].getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.stroke();
+  ctx.lineTo(newPos.x, newPos.y);
+  ctx.stroke();
 
-    setLastPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  setLastPos(newPos);
+  // Reset to normal mode after stroke
+  ctx.globalCompositeOperation = 'source-over';
+};
 
-    // Reset to normal mode after stroke
-    ctx.globalCompositeOperation = 'source-over';
-  };
+const stopDrawing = () => {
+      
+  setMousePos(null);
+  setIsDrawing(false);
+  setLastPos(null);
+  if (currentStroke.length > 0) {
+    const newStroke = {
+      id: Date.now(), // unique ID
+      layerId: layers[activeLayer]?.id,
+      points: currentStroke,
+      color,
+      brushSize,
+      tool
+    };
+    setStrokes(prev => [...prev, newStroke]);
+    setCurrentStroke([]);
+};
+}
 
 
   // --- Layer management ---
@@ -159,8 +173,6 @@ export default function PixelArtPage() {
   };
 
   // --- Drag & Drop Reordering ---
-  const dragItem = useRef();
-  const dragOverItem = useRef();
 
   const handleDragStart = (index) => {
     dragItem.current = index;
@@ -171,13 +183,23 @@ export default function PixelArtPage() {
   };
 
   const handleDrop = () => {
+    const activeLayerId = layers[activeLayer]?.id;
+
     const copyListItems = [...layers];
     const dragItemContent = copyListItems[dragItem.current];
     copyListItems.splice(dragItem.current, 1);
     copyListItems.splice(dragOverItem.current, 0, dragItemContent);
+    
     dragItem.current = null;
     dragOverItem.current = null;
+    
     setLayers(copyListItems);
+
+    // Maintain active selection on the same layer ID
+    const newActiveIndex = copyListItems.findIndex(l => l.id === activeLayerId);
+    if (newActiveIndex !== -1) {
+      setActiveLayer(newActiveIndex);
+    }
   };
 
   const handleMouseMovePreview = (e) => {
@@ -188,19 +210,41 @@ export default function PixelArtPage() {
   });
 };
 
-const handleMouseDown = (e) => {
+  const handleMouseDown = (e, layerIndex) => {
+    setIsDrawing(true);
     setDragging(true);
-    setOffset({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    });
+    // Get the canvas bounding box to calculate relative coordinates
+    const rect = canvasRefs.current[layerIndex].getBoundingClientRect();
+    const pos = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+      };
+    setMousePos(pos);
+    setCurrentStroke([pos]);
   };
+
+  const handleMouseUp = () => {
+    if (currentStroke.length > 0) {
+      setStrokes(prev => [
+        ...prev,
+        {
+          layer: activeLayer,
+          layerId: layers[activeLayer]?.id,
+          color,
+          brushSize,
+          tool
+        }
+      ]);
+      setCurrentStroke([]);
+    }
+    setIsDrawing(false);
+  };
+
 
     // --- Animation Frame controls ---
   const addFrame = () => {
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
-
 
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -215,6 +259,32 @@ const handleMouseDown = (e) => {
     setFrames(newFrames);
     setCurrentFrameIndex(Math.max(0, index - 1));
   };
+
+  // --- Undo/Redo Support Functions ---
+  const getMousePos = (e, layerIndex) => {
+    const rect = canvasRefs.current[layerIndex].getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  };
+
+  const handleMouseMove = (e, layerIndex) => {
+    if (!isDrawing) return;
+    const pos = getMousePos(e, layerIndex);
+    setCurrentStroke(prev => [...prev, pos]);
+  };
+
+  const handleUndo = () => {
+  if (currentStroke.length > 0) {
+    // Cancel the stroke in progress
+    setCurrentStroke([]);
+  } else {
+    // Remove last committed stroke
+    setStrokes(prev => prev.slice(0, -2));
+  }
+};
+
 
     {/* 
   
@@ -268,6 +338,7 @@ const handleMouseDown = (e) => {
     }
   }, []);
 
+
   // --- Load current frame into canvas ---
   useEffect(() => {
     if (frames[currentFrameIndex] && ctxRef.current) {
@@ -275,252 +346,43 @@ const handleMouseDown = (e) => {
     }
   }, [currentFrameIndex, frames]);
 
+
+// Redraw whenever strokes or layers change
+useEffect(() => {
+  layers.forEach((layer, index) => {
+    const canvas = canvasRefs.current[index];
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    strokes
+      .filter(s => s.layerId === layer.id)
+      .forEach(stroke => {
+        // Guard against missing points array
+        if (!stroke.points || stroke.points.length === 0) return;
+
+        ctx.lineWidth = stroke.brushSize;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = stroke.color;
+        ctx.globalCompositeOperation = stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
+
+        ctx.beginPath();
+        stroke.points.forEach((point, i) => {
+          if (i === 0) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        });
+        ctx.stroke();
+      });
+  });
+}, [strokes, layers]);
+
+
   {/* 
   
       vvvvv WHAT DISPLAYS ON THE ACTUAL SCREEN (FRONTEND) vvvvv
   
 */}
-
-
- {/* 
-
-  return (
-    <div style={{ display: 'flex', height: '100vh' }}>
-
-      {/* Left Toolbar (Drawing Tools) *.............../}
-      <div
-        style={{
-          width: toolbarWidth,
-          borderRight: '2px solid #ccc',
-          padding: '10px',
-          boxSizing: 'border-box'
-        }}>
-
-        <h3>Tools</h3>
-        <button
-          onClick={() => setTool('pencil')}
-          style={{
-            backgroundColor: tool === 'pencil' ? '#d0ebff' : 'transparent',
-            border: tool === 'pencil' ? '2px solid #339af0' : '1px solid #ccc',
-            padding: '5px 10px',
-            marginRight: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          ✏️ Pencil
-        </button>
-
-        <button
-          onClick={() => setTool('eraser')}
-          style={{
-            backgroundColor: tool === 'eraser' ? '#ffe3e3' : 'transparent',
-            border: tool === 'eraser' ? '2px solid #f03e3e' : '1px solid #ccc',
-            padding: '5px 10px',
-            cursor: 'pointer'
-          }}
-        >
-          🧹 Eraser
-        </button>
-
-
-        <h3>Color</h3>
-        <input
-          type="color"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-        />
-
-        <h3>Brush Size</h3>
-        <input
-          type="number"
-          min="1"
-          max="50"
-          value={brushSize}
-          onChange={(e) => setBrushSize(Number(e.target.value))}
-        />
-
-
-    {/* Layers *................/}
-        <h3>Layers</h3>
-        <button onClick={addLayer} disabled={layers.length >= 10}>
-          ➕ Add Layer
-        </button>
-
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-      {layers.map((layer, index) => (
-        <li
-          key={layer.id}
-          draggable
-          onDragStart={() => handleDragStart(index)}
-          onDragEnter={() => handleDragEnter(index)}
-          onDragEnd={handleDrop}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: index === activeLayer ? '#fff3bf' : 'transparent', // yellow highlight
-            border: index === activeLayer ? '2px solid #f59f00' : '1px solid transparent',
-            padding: '4px',
-            cursor: 'grab',
-            borderRadius: '4px'
-          }}
-        >
-          <input
-            type="radio"
-            checked={index === activeLayer}
-            onChange={() => setActiveLayer(index)}
-          />
-          <input
-            type="text"
-            value={layer.name}
-            onChange={(e) => renameLayer(index, e.target.value)}
-            style={{ flex: 1, marginLeft: '5px' }}
-          />
-          <input
-            type="checkbox"
-            checked={layer.visible}
-            onChange={() => toggleVisibility(index)}
-            title="Toggle visibility"
-          />
-          <button
-            onClick={() => removeLayer(index)}
-            disabled={layers.length === 1}
-            style={{ marginLeft: '5px' }}
-          >
-            🗑️
-          </button>
-        </li>
-      ))}
-    </ul>
-
-      </div>
-
-      {/* Resize Left Toolbar Handle *........................./}
-      <div
-        style={{
-          width: '5px',
-          cursor: 'col-resize',
-          background: '#ccc'
-        }}
-        onMouseDown={startResize}
-      ></div>
-
-      {/* Canvas Area *............................./}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        
-      {/* Layer Canvases *............................../}
-      {[...layers].map((layer, index) => (
-        <canvas
-          key={layer.id}
-          ref={(el) => (canvasRefs.current[index] = el)}
-          width={800}
-          height={500}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            zIndex: index,
-            display: layer.visible ? 'block' : 'none',
-            pointerEvents: index === activeLayer ? 'auto' : 'none' // only selected layer is clickable
-          }}
-          onMouseDown={(e) => startDrawing(e, index)}
-          onMouseMove={(e) => {
-            draw(e, index);
-            if (index === activeLayer && !isDrawing) handleMouseMovePreview(e);
-          }}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-        />
-      ))}
-    </div>
-
-     {/* Brush preview overlay *................./}
-      <canvas
-        ref={(el) => (previewCanvasRef.current = el)}
-        width={800}
-        height={500}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          zIndex: layers.length + 1,
-          pointerEvents: 'none' // so it doesn't block drawing
-        }}
-      />
-
-{/* RIGHT TOOLBAR (Frame Previewer) *................./}
-    <div
-      style={{
-        width: '200px',
-        backgroundColor: '#f1f3f5',
-        borderLeft: '1px solid #ccc',
-        padding: '10px',
-        overflowY: 'auto'
-      }}
-    >
-      <h3>Frames</h3>
-      {frames.map((frame, index) => (
-        <div
-          key={index}
-          style={{
-            border: index === currentFrameIndex ? '2px solid blue' : '1px solid gray',
-            marginBottom: '5px',
-            cursor: 'pointer',
-            position: 'relative'
-          }}
-          onClick={() => setCurrentFrameIndex(index)}
-        >
-          <canvas
-            width={100}
-            height={80}
-            ref={(previewCanvas) => {
-              if (previewCanvas && frame) {
-                const previewCtx = previewCanvas.getContext('2d');
-                previewCtx.putImageData(frame, 0, 0);
-              }
-            }}
-          />
-          <button
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              background: 'red',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteFrame(index);
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      ))}
-
-      <button onClick={addFrame} style={{ width: '100%', marginTop: '10px' }}>
-        ➕ Add Frame
-      </button>
-    </div>
-
-  </div>
-
-  );
-
-*/}
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -538,6 +400,14 @@ const handleMouseDown = (e) => {
       }}
     >
       <h3>Tools</h3>
+
+      {/* UNDO BUTTON */}
+      <div style={{ marginTop: "10px" }}>
+        <button onClick={handleUndo} disabled={strokes.length === 0}>
+          Undo
+        </button>
+      </div>
+
       <button
         onClick={() => setTool('pencil')}
         style={{
@@ -667,13 +537,23 @@ const handleMouseDown = (e) => {
             display: layer.visible ? 'block' : 'none',
             pointerEvents: index === activeLayer ? 'auto' : 'none'
           }}
-          onMouseDown={(e) => startDrawing(e, index)}
+          onMouseDown={(e) => {
+            startDrawing(e, index);
+            handleMouseDown(e, index);
+          }}
           onMouseMove={(e) => {
             draw(e, index);
             if (index === activeLayer && !isDrawing) handleMouseMovePreview(e);
+            handleMouseMove(e, index);
           }}
-          onMouseUp={() => stopDrawing(index)}
-          onMouseLeave={() => stopDrawing(index)}
+          onMouseUp={() => {
+            stopDrawing(index);
+            handleMouseUp();
+          }}
+          onMouseLeave={() => {
+            stopDrawing(index)
+            handleMouseUp();
+          }}
         />
       ))}
 
@@ -736,9 +616,11 @@ const handleMouseDown = (e) => {
         </div>
       ))}
 
-      <button onClick={addFrame}>➕ Add Frame</button>
+  (THE ADD FRAME BUTTON DOESNT DO ANYTHING RIGHT NOWWWWWWWWW)
+      <button>
+        ➕ Add Frame
+        </button>
     </div>
   </div>
 );
-
 }
