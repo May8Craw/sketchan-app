@@ -86,56 +86,7 @@ export default function ArtPage() {
     }
   }, [mousePos, brushSize, isPlaying, previewCanvasRef]);
 
-// Canvas Layer Redraw Engine
-useEffect(() => {
-  // Get strokes for the currently active animation frame
-  const currentFrameStrokes = frames[currentFrameIndex]?.strokes || [];
-
-  // Step 1: Update offscreen cache for all visible layers
-  layers.forEach((layer) => {
-    if (!layer.visible) return;
-    const layerStrokes = currentFrameStrokes.filter((s) => s.layerId === layer.id);
-    updateLayerCache(layer.id, layerStrokes);
-  });
-
-  // Step 2: Render cached canvases onto active visible canvases
-  layers.forEach((layer, index) => {
-    const canvas = canvasRefs.current[index];
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (!layer.visible) return;
-
-    // Render Onion Skins first if active and animation is paused
-    if (isOnionSkinEnabled && !isPlaying) {
-      if (currentFrameIndex > 0) {
-        drawTintedOnionSkin(ctx, currentFrameIndex - 1, '#ff3333', 0.35);
-      }
-      if (currentFrameIndex < frames.length - 1) {
-        drawTintedOnionSkin(ctx, currentFrameIndex + 1, '#3388ff', 0.35);
-      }
-    }
-
-    // High-performance direct blit from cached offscreen canvas
-    const cachedCanvas = layerCacheRef.current[layer.id];
-    if (cachedCanvas) {
-      ctx.drawImage(cachedCanvas, 0, 0);
-    }
-  });
-}, [
-  strokes,
-  layers,
-  frames,
-  currentFrameIndex,
-  isOnionSkinEnabled,
-  isPlaying,
-  canvasRefs
-]);
-
-
-  // Animation Playback Engine
+    // Animation Playback Engine
   useEffect(() => {
     if (!isPlaying) return;
     playheadRef.current = currentFrameIndex;
@@ -148,7 +99,7 @@ useEffect(() => {
     return () => clearInterval(interval);
   }, [isPlaying, fps, frames.length, currentFrameIndex, playheadRef, setCurrentFrameIndex]);
 
-  // Onion Skin Effect
+// Canvas Layer Redraw Engine
 useEffect(() => {
   layers.forEach((layer, index) => {
     const canvas = canvasRefs.current[index];
@@ -218,7 +169,6 @@ useEffect(() => {
     renderStrokes(ctx, currentFrameIndex);
   });
 }, [strokes, layers, currentFrameIndex, isOnionSkinEnabled, isPlaying, frames, canvasRefs]);
-
 
 
 
@@ -539,4 +489,3 @@ useEffect(() => {
     </div>
   );
 }
-
