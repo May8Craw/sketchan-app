@@ -215,6 +215,8 @@ const handleCanvasClick = (e, layerIndex) => {
 
 // -------------------------------------------------------------------------------------------
 
+// ACTUAL DISPLAY ON SCREEN
+
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
 
