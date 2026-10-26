@@ -6,6 +6,7 @@ import { GifWriter } from 'omggif';
 export const CHAR_LIMIT = 20;
 export const TOOLBAR_MIN_SIZE = 300;
 export const TOOLBAR_MAX_SIZE = 450;
+const FILL_TOLERANCE = 200; // Increase this if gaps are wider, lower it if it leaks too far
 
 export function useDrawingApp() {
   // -- States --
@@ -88,6 +89,7 @@ export function useDrawingApp() {
 
   const startDrawing = (e, layerIndex) => {
     if (isPlaying || layerIndex !== activeLayer || !layers[layerIndex]?.visible) return;
+    if (tool === 'bucket') return;
     setIsDrawing(true);
     const startPos = getMousePos(e, layerIndex);
     setLastPos(startPos);
@@ -96,6 +98,7 @@ export function useDrawingApp() {
 
   const draw = (e, layerIndex) => {
     if (!isDrawing || isPlaying || layerIndex !== activeLayer || !layers[layerIndex]?.visible) return;
+    if (tool === 'bucket') return;
     const canvas = canvasRefs.current[layerIndex];
     if (!canvas) return;
 
@@ -481,6 +484,94 @@ const updateLayerCache = (layerId, layerStrokes, width = 800, height = 500) => {
   ctx.globalCompositeOperation = 'source-over';
 };
 
+
+// PAINT BUCKET TOOL
+
+// Helper (Hex to RGBA)
+ const hexToRgba = (hex) => {
+    let c = hex.replace('#', '');
+    if (c.length === 3) {
+        c = c.split('').map(char => char + char).join('');
+    }
+    const num = parseInt(c, 16);
+    return {
+        r: (num >> 16) & 255,
+        g: (num >> 8) & 255,
+        b: num & 255,
+        a: 255
+    };
+};
+
+// Flood Fill Algorithm for Specific Layer 
+const floodFill = (layerIndex, startX, startY, hexColor) => {
+        const canvas = canvasRefs.current[layerIndex];
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        const imgData = ctx.getImageData(0, 0, width, height);
+        const data = imgData.data;
+        const fillColor = hexToRgba(hexColor);
+
+        const getPixelIndex = (x, y) => (y * width + x) * 4;
+
+        const startIndex = getPixelIndex(startX, startY);
+        const targetR = data[startIndex];
+        const targetG = data[startIndex + 1];
+        const targetB = data[startIndex + 2];
+        const targetA = data[startIndex + 3];
+
+        // Tolerance color matching helper
+        const colorsMatch = (r1, g1, b1, a1, r2, g2, b2, a2) => {
+            return (
+                Math.abs(r1 - r2) <= FILL_TOLERANCE &&
+                Math.abs(g1 - g2) <= FILL_TOLERANCE &&
+                Math.abs(b1 - b2) <= FILL_TOLERANCE &&
+                Math.abs(a1 - a2) <= FILL_TOLERANCE
+            );
+        };
+
+        if (colorsMatch(targetR, targetG, targetB, targetA, fillColor.r, fillColor.g, fillColor.b, fillColor.a)) {
+            return;
+        }
+
+        const colorPixel = (index) => {
+            data[index] = fillColor.r;
+            data[index + 1] = fillColor.g;
+            data[index + 2] = fillColor.b;
+            data[index + 3] = fillColor.a;
+        };
+
+        const queue = [[startX, startY]];
+        const visited = new Uint8Array(width * height);
+
+        while (queue.length > 0) {
+            const [x, y] = queue.shift();
+            const index = y * width + x;
+
+            if (x < 0 || x >= width || y < 0 || y >= height) continue;
+            if (visited[index]) continue;
+
+            const pixelIndex = getPixelIndex(x, y);
+            
+            // Check against target color using tolerance
+            if (!colorsMatch(data[pixelIndex], data[pixelIndex + 1], data[pixelIndex + 2], data[pixelIndex + 3], targetR, targetG, targetB, targetA)) {
+                continue;
+            }
+
+            colorPixel(pixelIndex);
+            visited[index] = 1;
+
+            queue.push([x + 1, y]);
+            queue.push([x - 1, y]);
+            queue.push([x, y + 1]);
+            queue.push([x, y - 1]);
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+    };
+
   return {
     layers,
     setLayers,
@@ -496,6 +587,7 @@ const updateLayerCache = (layerId, layerStrokes, width = 800, height = 500) => {
     toolbarWidth,
     mousePos,
     frames,
+    setFrames,
     currentFrameIndex,
     setCurrentFrameIndex,
     fps,
@@ -535,6 +627,7 @@ const updateLayerCache = (layerId, layerStrokes, width = 800, height = 500) => {
     isOnionSkinEnabled,
     toggleOnionSkin,
     updateLayerCache,
-    layerCacheRef
+    layerCacheRef,
+    floodFill
   };
 }
