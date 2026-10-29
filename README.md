@@ -4,6 +4,11 @@ Sketchan
 
 (Sketch and Animate -> Sketch An -> Sketchan)
 
+
+## WIP Figma Video ##
+
+https://github.com/user-attachments/assets/00b92917-93d0-498f-8d5b-e78c5ad588e3
+
 ## Intended Audience ##
 
 The intended audience for Sketchan are digital artists and animators who want to quickly iterate on an animatic idea or experiment with color and composition. Users are able to visit Sketchan to test animations in a simple and compact 2D space.
