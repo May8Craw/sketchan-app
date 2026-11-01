@@ -58,9 +58,16 @@ export default function ArtPage() {
     isLoadingPalette,
     isOnionSkinEnabled,
     toggleOnionSkin,
-    updateLayerCache,
-    layerCacheRef,
-    floodFill
+    floodFill,
+    canvasWidth,
+    setCanvasWidth,
+    canvasHeight,
+    setCanvasHeight,
+    isSettingsOpen,
+    setIsSettingsOpen,
+    scale,
+    handleWheel,
+    resetZoom
   } = useDrawingApp();
 
   // Resize Listener
@@ -227,8 +234,35 @@ const handleCanvasClick = (e, layerIndex) => {
           background: '#f1f3f5',
           padding: '10px',
           borderRight: '2px solid #ccc',
-          overflow: 'auto'
+          overflow: 'auto',
+          zIndex: 20
         }}>
+
+        {/* Settings Pop-up */}
+          <div style={{ marginTop: '10px' }}>
+        <button
+        onClick={() => setIsSettingsOpen(true)}
+        style={{
+          padding: '5px 10px',
+          cursor: 'pointer',
+          backgroundColor: '#f8f9fa',
+          border: '1px solid #ccc',
+          borderRadius: '4px'
+        }}
+      >
+        ⚙️ Settings
+        </button>
+      </div>
+
+        <span style={{ fontSize: '14px', fontWeight: '500' }}>
+          Zoom: {Math.round(scale * 100)}%
+        </span>
+        <button 
+          onClick={resetZoom}
+          style={{ padding: '6px 12px', cursor: 'pointer' }}
+        >
+          Reset Zoom
+        </button>
      
         <h3>Tools</h3>
 
@@ -385,46 +419,62 @@ const handleCanvasClick = (e, layerIndex) => {
       ></div>
 
       {/* CENTER CANVAS/DRAWING AREA */}
-      <div style={{ flex: 1, position: 'relative', background: '#fff' }}>
-        {layers.map((layer, index) => (
-          <canvas
-            key={layer.id}
-            ref={(el) => (canvasRefs.current[index] = el)}
-            width={800}
-            height={500}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              zIndex: index,
-              display: layer.visible ? 'block' : 'none',
-              pointerEvents: index === activeLayer && !isPlaying ? 'auto' : 'none'
-            }}
-            onMouseDown={(e) => startDrawing(e, index)}
-            onMouseMove={(e) => {
-              draw(e, index);
-              if (index === activeLayer && !isDrawing) handleMouseMovePreview(e);
-            }}
-            onMouseUp={stopDrawing}
-            onMouseLeave={handleMouseLeaveCanvas}
-            //Paint bucket click
-            onClick={(e) => handleCanvasClick(e, index)}
-          />
-        ))}
+      <div style={{ flex: 1, position: 'relative', background: '#fff', overflow: 'hidden' }}
+      onWheel={handleWheel}
+      >
 
-        {/* Brush preview overlay */}
+       {/* 🌟 ZOOM CONTAINER: Only this container scales everything together cleanly */}
+    <div 
+      style={{ 
+        position: 'absolute', 
+        top: 0, 
+        left: 0, 
+        width: canvasWidth, 
+        height: canvasHeight, 
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        pointerEvents: 'none' // Allows container to pass through, individual canvases handle pointer events
+      }}
+    >
+      {layers.map((layer, index) => (
         <canvas
-          ref={previewCanvasRef}
-          width={800}
-          height={500}
+          key={layer.id}
+          ref={(el) => (canvasRefs.current[index] = el)}
+          width={canvasWidth}
+          height={canvasHeight}
           style={{
             position: 'absolute',
             top: 0,
             left: 0,
-            zIndex: layers.length + 1,
-            pointerEvents: 'none'
+            zIndex: index,
+            display: layer.visible ? 'block' : 'none',
+            pointerEvents: index === activeLayer && !isPlaying ? 'auto' : 'none'
           }}
+          onMouseDown={(e) => startDrawing(e, index)}
+          onMouseMove={(e) => {
+            draw(e, index);
+            if (index === activeLayer && !isDrawing) handleMouseMovePreview(e);
+          }}
+          onMouseUp={stopDrawing}
+          onMouseLeave={handleMouseLeaveCanvas}
+          onClick={(e) => handleCanvasClick(e, index)}
         />
+      ))}
+
+      {/* Brush preview overlay */}
+      <canvas
+        ref={previewCanvasRef}
+        width={canvasWidth}
+        height={canvasHeight}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: layers.length + 1,
+          pointerEvents: 'none'
+        }}
+      />
+    </div>
       </div>
 
       {/* RIGHT ANIMATION PANEL */}
@@ -437,7 +487,8 @@ const handleCanvasClick = (e, layerIndex) => {
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px'
+          gap: '10px',
+          zIndex: 20
         }}
       >
         <h3>Animation Controls</h3>
@@ -541,6 +592,90 @@ const handleCanvasClick = (e, layerIndex) => {
           ))}
         </div>
       </div>
+
+      {/* CANVAS SETTINGS */}
+{isSettingsOpen && (
+  <div
+    style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 1000
+    }}
+  >
+    <div
+      style={{
+        backgroundColor: '#fff',
+        padding: '20px',
+        borderRadius: '8px',
+        width: '300px',
+        boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}
+    >
+      <h3>Canvas Settings</h3>
+
+      <div>
+        <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>
+          Width (1 - 3500 px):
+        </label>
+        <input
+          type="number"
+          min="1"
+          max="3500"
+          value={canvasWidth}
+          onChange={(e) => setCanvasWidth(Number(e.target.value))}
+          style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
+        />
+      </div>
+
+      <div>
+        <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>
+          Height (1 - 3500 px):
+        </label>
+        <input
+          type="number"
+          min="1"
+          max="3500"
+          value={canvasHeight}
+          onChange={(e) => setCanvasHeight(Number(e.target.value))}
+          style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
+        />
+      </div>
+
+      <button
+        onClick={() => {
+          const validWidth = Math.min(Math.max(canvasWidth, 1), 3500);
+          const validHeight = Math.min(Math.max(canvasHeight, 1), 3500);
+          
+          setCanvasWidth(validWidth);
+          setCanvasHeight(validHeight);
+          setIsSettingsOpen(false)
+        }}
+        style={{
+          marginTop: '10px',
+          padding: '8px',
+          backgroundColor: '#339af0',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          fontWeight: 'bold'
+        }}
+      >
+        Apply & Close
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 }
