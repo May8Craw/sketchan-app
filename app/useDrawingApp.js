@@ -31,6 +31,12 @@ export function useDrawingApp() {
 
   const [isOnionSkinEnabled, setIsOnionSkinEnabled] = useState(false);
 
+  const [canvasWidth, setCanvasWidth] = useState(800);
+  const [canvasHeight, setCanvasHeight] = useState(500);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const [scale, setScale] = useState(1); // Default zoom level
+
 
   // -- Refs --
   const canvasRefs = useRef([]);
@@ -80,8 +86,8 @@ export function useDrawingApp() {
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      x: (e.clientX - rect.left) / scale,
+      y: (e.clientY - rect.top) / scale
     };
   };
 
@@ -215,14 +221,30 @@ export function useDrawingApp() {
   };
 
   // Pen size preview
-  const handleMouseMovePreview = (e) => {
-    if (!previewCanvasRef.current) return;
-    const rect = previewCanvasRef.current.getBoundingClientRect();
-    setMousePos({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
-  };
+const handleMouseMovePreview = (e) => {
+  const canvas = canvasRefs.current[activeLayer];
+  if (!canvas) return;
+
+  // 1. Use your getMousePos function so it automatically divides by scale
+  const pos = getMousePos(e, activeLayer);
+  setMousePos(pos); // Store the scaled X and Y in state
+
+  // 2. Draw the brush preview on your previewCanvasRef
+  const previewCanvas = previewCanvasRef.current;
+  if (!previewCanvas) return;
+
+  const ctx = previewCanvas.getContext('2d');
+  ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+  // If we are using a tool that shows a preview (like pencil or eraser)
+  if (tool === 'pencil' || tool === 'eraser') {
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, brushSize / 2, 0, Math.PI * 2);
+    ctx.strokeStyle = tool === 'eraser' ? '#000' : color;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+};
 
 const handleMouseLeaveCanvas = () => {
     stopDrawing();
@@ -268,40 +290,11 @@ const handleMouseLeaveCanvas = () => {
     setCurrentFrameIndex(dragFrameOverItem.current);
   };
 
-  const renderFrameToCanvas = (frameStrokes, width = 800, height = 500) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-
-    layers.forEach((layer) => {
-      if (!layer.visible) return;
-      frameStrokes
-        .filter((s) => s.layerId === layer.id)
-        .forEach((stroke) => {
-          if (!stroke.points || stroke.points.length === 0) return;
-          ctx.lineWidth = stroke.brushSize;
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.strokeStyle = stroke.color;
-          ctx.globalCompositeOperation =
-            stroke.tool === 'eraser' ? 'destination-out' : 'source-over';
-
-          ctx.beginPath();
-          stroke.points.forEach((pt, i) => {
-            if (i === 0) ctx.moveTo(pt.x, pt.y);
-            else ctx.lineTo(pt.x, pt.y);
-          });
-          ctx.stroke();
-        });
-    });
-    return canvas;
-  };
 
 // Export Animation as Gif
 const exportGIF = () => {
-  const width = 800;
-  const height = 500;
+  const width = canvasWidth;
+  const height = canvasHeight;
 
   const buffer = new Uint8Array(width * height * frames.length * 5 + 1024);
   const writer = new GifWriter(buffer, width, height, { loop: 0 });
@@ -450,7 +443,7 @@ const toggleOnionSkin = () => {
   setIsOnionSkinEnabled((prev) => !prev);
 };
 
-const updateLayerCache = (layerId, layerStrokes, width = 800, height = 500) => {
+const updateLayerCache = (layerId, layerStrokes, width = canvasWidth, height = canvasHeight) => {
   let offscreen = layerCacheRef.current[layerId];
 
   if (!offscreen) {
@@ -570,7 +563,24 @@ const floodFill = (layerIndex, startX, startY, hexColor) => {
         }
 
         ctx.putImageData(imgData, 0, 0);
+
     };
+
+    // Handle zooming with the mouse wheel
+    const handleWheel = (e) => {
+        e.preventDefault(); // Stop the page from scrolling normally
+        const zoomIntensity = 0.1;
+        
+        if (e.deltaY < 0) {
+          // Scroll UP -> Zoom IN (cap it at 3x zoom)
+          setScale((prevScale) => Math.min(prevScale + zoomIntensity, 3));
+        } else {
+          // Scroll DOWN -> Zoom OUT (cap it down to 0.2x zoom)
+          setScale((prevScale) => Math.max(prevScale - zoomIntensity, 0.2));
+        }
+      };
+
+    const resetZoom = () => setScale(1);
 
   return {
     layers,
@@ -628,6 +638,15 @@ const floodFill = (layerIndex, startX, startY, hexColor) => {
     toggleOnionSkin,
     updateLayerCache,
     layerCacheRef,
-    floodFill
+    floodFill,
+    canvasWidth,
+    setCanvasWidth,
+    canvasHeight,
+    setCanvasHeight,
+    isSettingsOpen,
+    setIsSettingsOpen,
+    scale,
+    handleWheel,
+    resetZoom
   };
 }

@@ -56,6 +56,8 @@ button {
   flex-direction: column;
   gap: 16px;
   border-right: 2px solid #c9b99a;
+  z-index: 10; /* Higher than the canvas */
+  pointer-events: auto; /* Ensures buttons can be clicked */
 }
 
 .canvas-container {
@@ -69,6 +71,7 @@ button {
 canvas {
   border: 2px solid #c9b99a;
   cursor: crosshair;
+  z-index: 1;
 }
 
 .tool-section {
