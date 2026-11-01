@@ -19,6 +19,7 @@ export default function ArtPage() {
     toolbarWidth,
     mousePos,
     frames,
+    setFrames,
     currentFrameIndex,
     setCurrentFrameIndex,
     fps,
@@ -58,7 +59,8 @@ export default function ArtPage() {
     isOnionSkinEnabled,
     toggleOnionSkin,
     updateLayerCache,
-    layerCacheRef
+    layerCacheRef,
+    floodFill
   } = useDrawingApp();
 
   // Resize Listener
@@ -113,6 +115,10 @@ useEffect(() => {
       frameStrokes
         .filter((s) => s.layerId === layer.id)
         .forEach((stroke) => {
+          if (stroke.tool === 'bucket') {
+                floodFill(index, stroke.x, stroke.y, stroke.color);
+            }
+            else {
           if (!stroke.points || stroke.points.length === 0) return;
 
           targetCtx.lineWidth = stroke.brushSize;
@@ -128,6 +134,7 @@ useEffect(() => {
             else targetCtx.lineTo(point.x, point.y);
           });
           targetCtx.stroke();
+          }
         });
     };
 
@@ -171,9 +178,44 @@ useEffect(() => {
 }, [strokes, layers, currentFrameIndex, isOnionSkinEnabled, isPlaying, frames, canvasRefs]);
 
 
+// Canvas Click Event Handler (Paint Bucket Tool)
+const handleCanvasClick = (e, layerIndex) => {
+    if (tool !== 'bucket') return;
+
+    const canvas = canvasRefs.current[layerIndex];
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor(e.clientX - rect.left);
+    const y = Math.floor(e.clientY - rect.top);
+    const targetLayerId = layers[layerIndex].id;
+
+    // Create a new bucket stroke action
+    const newBucketStroke = {
+        tool: 'bucket',
+        layerId: targetLayerId,
+        x: x,
+        y: y,
+        color: color
+    };
+
+    // Save it to your frames state so the redraw engine picks it up
+    setFrames((prevFrames) => {
+        const updated = [...prevFrames];
+        const currentFrame = updated[currentFrameIndex];
+        updated[currentFrameIndex] = {
+            ...currentFrame,
+            strokes: [...currentFrame.strokes, newBucketStroke]
+        };
+        return updated;
+    });
+};
+
 
 
 // -------------------------------------------------------------------------------------------
+
+// ACTUAL DISPLAY ON SCREEN
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -219,6 +261,17 @@ useEffect(() => {
             }}
           >
             🧹 Eraser
+          </button>
+          <button
+            onClick={() => setTool('bucket')}
+            style={{
+              backgroundColor: tool === 'bucket' ? '#e6fcf5' : 'transparent',
+              border: tool === 'bucket' ? '2px solid #12b886' : '1px solid #ccc',
+              padding: '5px 10px',
+              cursor: 'pointer'
+            }}
+          >
+            🪣 Paint Bucket
           </button>
         </div>
 
@@ -354,6 +407,8 @@ useEffect(() => {
             }}
             onMouseUp={stopDrawing}
             onMouseLeave={handleMouseLeaveCanvas}
+            //Paint bucket click
+            onClick={(e) => handleCanvasClick(e, index)}
           />
         ))}
 
