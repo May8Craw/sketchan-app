@@ -39,6 +39,8 @@ export function useDrawingApp() {
 
   const [selectedStrokeId, setSelectedStrokeId] = useState(null);
 
+  const [savedProjects, setSavedProjects] = useState([]);
+
 
   // -- Refs --
   const canvasRefs = useRef([]);
@@ -645,6 +647,63 @@ const floodFill = (layerIndex, startX, startY, hexColor) => {
       return null;
     };
 
+    // Save current project (up to 3 slots)
+const saveCurrentProject = (projectName = `Project ${savedProjects.length + 1}`) => {
+  if (savedProjects.length >= 3) {
+    alert('Maximum 3 saved projects allowed. Please delete one to save a new one.');
+    return;
+  }
+
+  // Capture a preview thumbnail from the active canvas layer
+  const activeCanvas = canvasRefs.current[activeLayer];
+  const previewUrl = activeCanvas ? activeCanvas.toDataURL('image/png') : '';
+
+  const newProject = {
+    id: Date.now(),
+    name: projectName,
+    date: new Date().toLocaleDateString(),
+    previewUrl,
+    canvasWidth,
+    canvasHeight,
+    layers,
+    strokes,
+    frames,
+    fps
+  };
+
+  const updatedProjects = [...savedProjects, newProject];
+  setSavedProjects(updatedProjects);
+  localStorage.setItem('drawing_projects', JSON.stringify(updatedProjects));
+  alert('Project saved successfully!');
+};
+
+// 2. Add renameProject function
+const renameProject = (id, newName) => {
+  const updatedProjects = savedProjects.map((proj) => 
+    proj.id === id ? { ...proj, name: newName } : proj
+  );
+  setSavedProjects(updatedProjects);
+  localStorage.setItem('drawing_projects', JSON.stringify(updatedProjects));
+};
+
+// Delete a saved project
+const deleteProject = (id) => {
+  const updatedProjects = savedProjects.filter(p => p.id !== id);
+  setSavedProjects(updatedProjects);
+  localStorage.setItem('drawing_projects', JSON.stringify(updatedProjects));
+};
+
+// Load a saved project into your active workspace
+const loadProject = (project) => {
+  setCanvasWidth(project.canvasWidth);
+  setCanvasHeight(project.canvasHeight);
+  setLayers(project.layers);
+  setStrokes(project.strokes);
+  setFrames(project.frames);
+  setFps(project.fps || 10);
+  setIsSettingsOpen(false);
+};
+
   return {
     layers,
     setLayers,
@@ -711,6 +770,12 @@ const floodFill = (layerIndex, startX, startY, hexColor) => {
     scale,
     handleWheel,
     resetZoom,
-    selectedStrokeId
+    selectedStrokeId,
+    savedProjects, 
+    setSavedProjects,
+    deleteProject,
+    loadProject,
+    saveCurrentProject,
+    renameProject
   };
 }

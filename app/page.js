@@ -68,7 +68,13 @@ export default function ArtPage() {
     scale,
     handleWheel,
     resetZoom,
-    selectedStrokeId
+    selectedStrokeId,
+    savedProjects, 
+    setSavedProjects,
+    deleteProject,
+    loadProject,
+    saveCurrentProject,
+    renameProject
   } = useDrawingApp();
 
   // Resize Listener
@@ -234,6 +240,17 @@ const handleCanvasClick = (e, layerIndex) => {
     });
 };
 
+// Load saved projects from localStorage when the app boots up
+useEffect(() => {
+  const loaded = localStorage.getItem('drawing_projects');
+  if (loaded) {
+    try {
+      setSavedProjects(JSON.parse(loaded));
+    } catch (e) {
+      console.error('Failed to parse saved projects', e);
+    }
+  }
+}, []);
 
 
 // -------------------------------------------------------------------------------------------
@@ -621,89 +638,201 @@ const handleCanvasClick = (e, layerIndex) => {
         </div>
       </div>
 
-      {/* CANVAS SETTINGS */}
-{isSettingsOpen && (
-  <div
-    style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1000
-    }}
-  >
-    <div
-      style={{
-        backgroundColor: '#fff',
-        padding: '20px',
-        borderRadius: '8px',
-        width: '300px',
-        boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px'
-      }}
-    >
-      <h3>Canvas Settings</h3>
+      {/* CANVAS AND PROJECT SETTINGS */}
+      {isSettingsOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '24px',
+              borderRadius: '8px',
+              width: '400px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px'
+            }}
+          >
+            <h3 style={{ margin: 0 }}>⚙️ Settings & Projects</h3>
 
-      <div>
-        <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>
-          Width (1 - 3500 px):
-        </label>
-        <input
-          type="number"
-          min="1"
-          max="3500"
-          value={canvasWidth}
-          onChange={(e) => setCanvasWidth(Number(e.target.value))}
-          style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
-        />
-      </div>
+            {/* 1. Canvas Size Adjuster */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Width (1-3500px):</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="3500"
+                  value={canvasWidth}
+                  onChange={(e) => setCanvasWidth(Number(e.target.value))}
+                  style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px' }}>Height (1-3500px):</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="3500"
+                  value={canvasHeight}
+                  onChange={(e) => setCanvasHeight(Number(e.target.value))}
+                  style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
 
-      <div>
-        <label style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>
-          Height (1 - 3500 px):
-        </label>
-        <input
-          type="number"
-          min="1"
-          max="3500"
-          value={canvasHeight}
-          onChange={(e) => setCanvasHeight(Number(e.target.value))}
-          style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
-        />
-      </div>
+            <hr style={{ border: '0', borderTop: '1px solid #eee', margin: '4px 0' }} />
 
-      <button
-        onClick={() => {
-          const validWidth = Math.min(Math.max(canvasWidth, 1), 3500);
-          const validHeight = Math.min(Math.max(canvasHeight, 1), 3500);
-          
-          setCanvasWidth(validWidth);
-          setCanvasHeight(validHeight);
-          setIsSettingsOpen(false)
-        }}
-        style={{
-          marginTop: '10px',
-          padding: '8px',
-          backgroundColor: '#339af0',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontWeight: 'bold'
-        }}
-      >
-        Apply & Close
-      </button>
-    </div>
-  </div>
-)}
+            {/* 2. Export Current Canvas as PNG */}
+            <div>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>Quick Export</h4>
+              <button
+                onClick={() => {
+                  const activeCanvas = canvasRefs.current[activeLayer];
+                  if (!activeCanvas) return;
+                  const link = document.createElement('a');
+                  link.download = 'drawing.png';
+                  link.href = activeCanvas.toDataURL('image/png');
+                  link.click();
+                }}
+                style={{ width: '100%', padding: '8px', cursor: 'pointer', background: '#e7f5ff', border: '1px solid #339af0', borderRadius: '4px' }}
+              >
+                📥 Download Active Layer as PNG
+              </button>
+            </div>
+
+            <hr style={{ border: '0', borderTop: '1px solid #eee', margin: '4px 0' }} />
+
+            {/* 3. Save Project Slot Management (Max 3) */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <h4 style={{ margin: 0, fontSize: '14px' }}>Saved Projects ({savedProjects.length}/3)</h4>
+                <button
+                  onClick={() => saveCurrentProject()}
+                  disabled={savedProjects.length >= 3}
+                  style={{ padding: '4px 8px', background: '#2b8a3e', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  💾 Save Current Work
+                </button>
+              </div>
+
+              {savedProjects.length === 0 ? (
+                <p style={{ fontSize: '13px', color: '#888', fontStyle: 'italic' }}>No projects saved yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {savedProjects.map((proj) => (
+                <div
+                  key={proj.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: '#f8f9fa',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    border: '1px solid #ddd',
+                    gap: '8px'
+                  }}
+                >
+                  {/* 🌟 Thumbnail Preview Image */}
+                  <div 
+                    style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      background: '#fff', 
+                      border: '1px solid #ccc', 
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    {proj.previewUrl ? (
+                      <img 
+                        src={proj.previewUrl} 
+                        alt="Preview" 
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                      />
+                    ) : (
+                      <span style={{ fontSize: '10px', color: '#aaa' }}>No Preview</span>
+                    )}
+                  </div>
+
+                  {/* 🌟 Editable Project Name Input */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <input
+                      type="text"
+                      value={proj.name}
+                      onChange={(e) => renameProject(proj.id, e.target.value)}
+                      style={{ fontSize: '13px', padding: '2px 4px', border: '1px solid transparent', background: 'transparent', fontWeight: '500' }}
+                      title="Click to rename"
+                    />
+                    <span style={{ fontSize: '10px', color: '#666', paddingLeft: '4px' }}>Saved on {proj.date}</span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      onClick={() => loadProject(proj)}
+                      style={{ padding: '4px 8px', cursor: 'pointer', fontSize: '12px' }}
+                    >
+                      Load
+                    </button>
+                    <button
+                      onClick={() => deleteProject(proj.id)}
+                      style={{ padding: '4px 8px', cursor: 'pointer', background: '#ffe3e3', color: '#c92a2a', border: 'none', borderRadius: '4px', fontSize: '12px' }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+                </div>
+              )}
+            </div>
+
+            {/* Close Modal Button */}
+            <button
+              onClick={() => {
+                const validW = Math.min(Math.max(canvasWidth, 1), 3500);
+                const validH = Math.min(Math.max(canvasHeight, 1), 3500);
+                setCanvasWidth(validW);
+                setCanvasHeight(validH);
+                setIsSettingsOpen(false);
+              }}
+              style={{
+                marginTop: '8px',
+                padding: '10px',
+                backgroundColor: '#339af0',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              Close Settings
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
