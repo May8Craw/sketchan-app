@@ -67,7 +67,8 @@ export default function ArtPage() {
     setIsSettingsOpen,
     scale,
     handleWheel,
-    resetZoom
+    resetZoom,
+    selectedStrokeId
   } = useDrawingApp();
 
   // Resize Listener
@@ -141,8 +142,23 @@ useEffect(() => {
             else targetCtx.lineTo(point.x, point.y);
           });
           targetCtx.stroke();
+
+          if (stroke.id === selectedStrokeId) {
+          ctx.save();
+          ctx.lineWidth = stroke.brushSize + 4; // Make the highlight slightly thicker than the stroke
+          ctx.strokeStyle = '#BE63FF'; // Bright selection blue (or a glowing color like yellow)
+          ctx.globalCompositeOperation = 'destination-over'; // Draws the highlight *behind* the original stroke so it frames it nicely
+          
+          ctx.beginPath();
+          stroke.points.forEach((point, i) => {
+            if (i === 0) ctx.moveTo(point.x, point.y);
+            else ctx.lineTo(point.x, point.y);
+          });
+          ctx.stroke();
+          ctx.restore();
           }
-        });
+
+        }});
     };
 
     // Helper to draw an onion skin frame with a tint color
@@ -308,6 +324,18 @@ const handleCanvasClick = (e, layerIndex) => {
             🪣 Paint Bucket
           </button>
         </div>
+
+        <button
+          onClick={() => setTool('select')}
+          style={{
+            backgroundColor: tool === 'select' ? '#e7f5ff' : 'transparent',
+            border: tool === 'select' ? '2px solid #1c7ed6' : '1px solid #ccc',
+            padding: '5px 10px',
+            cursor: 'pointer'
+          }}
+        >
+          ↖️ Select
+        </button>
 
         <div style={{ marginTop: '10px' }}>
           <label>Brush Size </label>
