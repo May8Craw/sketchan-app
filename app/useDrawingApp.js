@@ -37,6 +37,8 @@ export function useDrawingApp() {
 
   const [scale, setScale] = useState(1); // Default zoom level
 
+  const [selectedStrokeId, setSelectedStrokeId] = useState(null);
+
 
   // -- Refs --
   const canvasRefs = useRef([]);
@@ -95,6 +97,22 @@ export function useDrawingApp() {
 
   const startDrawing = (e, layerIndex) => {
     if (isPlaying || layerIndex !== activeLayer || !layers[layerIndex]?.visible) return;
+
+    const pos = getMousePos(e, layerIndex);
+
+    if (tool === 'select') {
+      const clickedId = findClickedStrokeId(pos.x, pos.y);
+      setSelectedStrokeId(clickedId);
+
+      if (clickedId !== null) {
+        setIsDrawing(true);
+        setLastPos(pos);
+      } else {
+        setSelectedStrokeId(null); // Clicked empty space
+      }
+      return;
+    }
+
     if (tool === 'bucket') return;
     setIsDrawing(true);
     const startPos = getMousePos(e, layerIndex);
@@ -102,13 +120,37 @@ export function useDrawingApp() {
     setCurrentStroke([startPos]);
   };
 
-  const draw = (e, layerIndex) => {
+ const draw = (e, layerIndex) => {
     if (!isDrawing || isPlaying || layerIndex !== activeLayer || !layers[layerIndex]?.visible) return;
+    
+    const newPos = getMousePos(e, layerIndex);
+
+    if (tool === 'select') {
+      if (selectedStrokeId === null || !lastPos) return;
+
+      const dx = newPos.x - lastPos.x;
+      const dy = newPos.y - lastPos.y;
+
+      setStrokes((prevStrokes) => {
+        return prevStrokes.map((stroke) => {
+          if (stroke.id === selectedStrokeId) {
+            return {
+              ...stroke,
+              points: stroke.points.map((p) => ({ x: p.x + dx, y: p.y + dy }))
+            };
+          }
+          return stroke;
+        });
+      });
+
+      setLastPos(newPos);
+      return;
+    }
+
     if (tool === 'bucket') return;
     const canvas = canvasRefs.current[layerIndex];
     if (!canvas) return;
 
-    const newPos = getMousePos(e, layerIndex);
     setMousePos(newPos);
     setCurrentStroke((prev) => [...prev, newPos]);
 
@@ -134,6 +176,10 @@ export function useDrawingApp() {
     if (!isDrawing) return;
     setIsDrawing(false);
     setLastPos(null);
+
+    if (tool === 'select') {
+      return;
+    }
 
     if (currentStroke.length > 0) {
       const activeLayerId = layers[activeLayer]?.id;
@@ -339,6 +385,7 @@ const exportGIF = () => {
           else ctx.lineTo(point.x, point.y);
         });
         ctx.stroke();
+
       });
     });
 
@@ -582,6 +629,22 @@ const floodFill = (layerIndex, startX, startY, hexColor) => {
 
     const resetZoom = () => setScale(1);
 
+    // Helper to check if a click is close to any point in a stroke
+    const findClickedStrokeId = (clickX, clickY) => {
+      for (let i = strokes.length - 1; i >= 0; i--) {
+        const stroke = strokes[i];
+        // Only check strokes that belong to the active layer
+        if (stroke.layerId !== layers[activeLayer]?.id) continue;
+
+        const isHit = stroke.points.some(p => {
+          const distance = Math.hypot(p.x - clickX, p.y - clickY);
+          return distance < 15; // Hit threshold
+        });
+        if (isHit) return stroke.id; // 🌟 Return the unique ID
+      }
+      return null;
+    };
+
   return {
     layers,
     setLayers,
@@ -647,6 +710,7 @@ const floodFill = (layerIndex, startX, startY, hexColor) => {
     setIsSettingsOpen,
     scale,
     handleWheel,
-    resetZoom
+    resetZoom,
+    selectedStrokeId
   };
 }
