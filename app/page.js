@@ -264,7 +264,7 @@ useEffect(() => {
       <div
         style={{
           width: toolbarWidth,
-          background: '#f1f3f5',
+          background: '#5E548E',
           padding: '10px',
           borderRight: '2px solid #ccc',
           overflow: 'auto',
@@ -272,7 +272,7 @@ useEffect(() => {
         }}>
 
         {/* Settings Pop-up */}
-          <div style={{ marginTop: '10px' }}>
+        <div style={{ marginTop: '10px'}}>
         <button
         onClick={() => setIsSettingsOpen(true)}
         style={{
@@ -281,80 +281,70 @@ useEffect(() => {
           backgroundColor: '#f8f9fa',
           border: '1px solid #ccc',
           borderRadius: '4px'
-        }}
-      >
-        ⚙️ Settings
+        }}>
+        🌣
         </button>
-      </div>
 
-        <span style={{ fontSize: '14px', fontWeight: '500' }}>
-          Zoom: {Math.round(scale * 100)}%
-        </span>
-        <button 
-          onClick={resetZoom}
-          style={{ padding: '6px 12px', cursor: 'pointer' }}
-        >
-          Reset Zoom
-        </button>
+        <label style={{ backgroundColor: '#231942', fontFamily: 'Mansalva', textAlign: 'center', color: '#fff', fontSize: '35px' }}>˚⋆ Sketch</label>
+        <label style={{ backgroundColor: '#231942', fontFamily: 'Mansalva', textAlign: 'center', color: '#fee2ff', fontSize: '35px' }}>An ⋆˚</label>
+
+        </div>
      
+        <div style={{ marginTop: '10px', borderTop: '3px solid #231942', paddingTop: '10px', textAlign: 'center', color: '#FFF'}}>
         <h3>Tools</h3>
-
-        <div style={{ marginTop: '10px' }}>
-          <button onClick={handleUndo} disabled={strokes.length === 0}>
-            Undo
-          </button>
         </div>
 
-        <div style={{ marginTop: '10px' }}>
+        <div style={{ marginTop: '10px', alignItems: 'center', textAlign: 'center', flex: 1 }}>
           <button
             onClick={() => setTool('pencil')}
             style={{
-              backgroundColor: tool === 'pencil' ? '#d0ebff' : 'transparent',
-              border: tool === 'pencil' ? '2px solid #339af0' : '1px solid #ccc',
+              backgroundColor: tool === 'pencil' ? '#fee2ff' : '#fff',
+              border: tool === 'pencil' ? '3px solid #c572d0' : '2px solid #ccc',
               padding: '5px 10px',
               marginRight: '5px',
               cursor: 'pointer'
             }}
           >
-            ✏️ Pencil
+            ✎ Paint ᝰ
           </button>
           <button
             onClick={() => setTool('eraser')}
             style={{
-              backgroundColor: tool === 'eraser' ? '#ffe3e3' : 'transparent',
-              border: tool === 'eraser' ? '2px solid #f03e3e' : '1px solid #ccc',
-              padding: '5px 10px',
+              backgroundColor: tool === 'eraser' ? '#fee2ff' : '#fff',
+              border: tool === 'eraser' ? '3px solid #c572d0' : '2px solid #ccc',
+              padding: '13px 10px',
               cursor: 'pointer'
             }}
           >
-            🧹 Eraser
+            ✘ Erase ⌫
           </button>
           <button
             onClick={() => setTool('bucket')}
             style={{
-              backgroundColor: tool === 'bucket' ? '#e6fcf5' : 'transparent',
-              border: tool === 'bucket' ? '2px solid #12b886' : '1px solid #ccc',
-              padding: '5px 10px',
+              backgroundColor: tool === 'bucket' ? '#fee2ff' : '#fff',
+              border: tool === 'bucket' ? '3px solid #c572d0' : '2px solid #ccc',
+              padding: '13px 10px',
               cursor: 'pointer'
             }}
           >
-            🪣 Paint Bucket
+            𖡎 Bucket Fill ▨
           </button>
-        </div>
-
-        <button
+          <button
           onClick={() => setTool('select')}
           style={{
-            backgroundColor: tool === 'select' ? '#e7f5ff' : 'transparent',
-            border: tool === 'select' ? '2px solid #1c7ed6' : '1px solid #ccc',
-            padding: '5px 10px',
+            backgroundColor: tool === 'select' ? '#fee2ff' : '#fff',
+            border: tool === 'select' ? '3px solid #c572d0' : '2px solid #ccc',
+            padding: '13px 12px',
             cursor: 'pointer'
           }}
         >
-          ↖️ Select
+          ⌞Select⌝
+      
         </button>
 
-        <div style={{ marginTop: '10px' }}>
+        </div>
+
+        <div style={{ marginTop: '10px', color: '#FFF' }}>
           <label>Brush Size </label>
           <input
             type="number"
@@ -365,48 +355,58 @@ useEffect(() => {
           />
         </div>
 
-        <div style={{ marginTop: '10px' }}>
+        <div style={{ marginTop: '10px', color: '#FFF' }}>
           <label>Brush Color </label>
           <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
         </div>
 
-    <div style={{ marginTop: '15px', borderTop: '1px solid #ccc', paddingTop: '10px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0 }}>Palette Generator (Huemint API)</h3>
+          <div 
+        style={{ 
+          marginTop: '15px', 
+          borderTop: '3px solid #231942', 
+          paddingTop: '10px', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          textAlign: 'center' 
+        }}
+      >
+        <h3 style={{ color: '#FFF' }}>Palette Generator</h3>
+        <h4 style={{ margin: '0 0 8px 0', color: '#FFF' }}>(Huemint API)</h4>
+
         <button 
           onClick={() => fetchHuemintPalette('transformer')} 
           disabled={isLoadingPalette}
-          style={{ padding: '3px 8px', cursor: 'pointer' }}
+          style={{ padding: '3px 8px', cursor: 'pointer', marginBottom: '8px' }}
         >
-          {isLoadingPalette ? '...' : 'Generate New Palette 🎨'}
+          {isLoadingPalette ? 'Creating ...' : '⋆.˚✮ New Palette ✮˚.⋆'}
         </button>
+
+        {/* Color Swatches Grid */}
+        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+          {palette.map((hexColor, idx) => (
+            <button
+              key={idx}
+              onClick={() => setColor(hexColor)}
+              title={`Select ${hexColor}`}
+              style={{
+                width: '28px',
+                height: '28px',
+                backgroundColor: hexColor,
+                border: color === hexColor ? '2px solid #000' : '2px solid #9F86C0',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                outline: color === hexColor ? '3px solid #fff' : 'none'
+              }}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Color Swatches Grid */}
-      <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-        {palette.map((hexColor, idx) => (
-          <button
-            key={idx}
-            onClick={() => setColor(hexColor)}
-            title={`Select ${hexColor}`}
-            style={{
-              width: '28px',
-              height: '28px',
-              backgroundColor: hexColor,
-              border: color === hexColor ? '2px solid #000' : '1px solid #aaa',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              outline: color === hexColor ? '2px solid #339af0' : 'none'
-            }}
-          />
-        ))}
-      </div>
-    </div>
-
-<div style={{ marginTop: '15px', borderTop: '1px solid #ccc', paddingTop: '10px' }}>
+    <div style={{ marginTop: '15px', borderTop: '3px solid #231942', paddingTop: '10px', textAlign: 'center', color: '#FFF' }}>
         <h3>Layers</h3>
         <button onClick={addLayer} disabled={layers.length >= 10}>
-          ➕ Add Layer
+          + New Layer
         </button>
 
         <ul style={{ listStyle: 'none', padding: 0 }}>
@@ -464,11 +464,32 @@ useEffect(() => {
       ></div>
 
       {/* CENTER CANVAS/DRAWING AREA */}
-      <div style={{ flex: 1, position: 'relative', background: '#fff', overflow: 'hidden' }}
+      <div style={{ flex: 1, position: 'relative', background: '#FFF', overflow: 'hidden' }}
       onWheel={handleWheel}
       >
+        {/* Floating Undo Button (Top Right) */}
+    <button
+      onClick={handleUndo}
+      disabled={strokes.length === 0}
+      style={{
+        position: 'absolute',
+        top: '12px',
+        right: '12px',
+        zIndex: 100, // Keeps it neatly on top of the canvas
+        padding: '6px 12px',
+        backgroundColor: '#fff',
+        border: '2px solid #231942',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+        fontWeight: '500'
+      }}
+    >
+      ↩
+    </button>
 
-       {/* 🌟 ZOOM CONTAINER: Only this container scales everything together cleanly */}
+
+       {/* ZOOM CONTAINER: Only this container scales everything together */}
     <div 
       style={{ 
         position: 'absolute', 
@@ -493,7 +514,8 @@ useEffect(() => {
             left: 0,
             zIndex: index,
             display: layer.visible ? 'block' : 'none',
-            pointerEvents: index === activeLayer && !isPlaying ? 'auto' : 'none'
+            pointerEvents: index === activeLayer && !isPlaying ? 'auto' : 'none',
+            border: '4px solid #231942',
           }}
           onMouseDown={(e) => startDrawing(e, index)}
           onMouseMove={(e) => {
@@ -526,27 +548,48 @@ useEffect(() => {
       <div
         style={{
           width: '240px',
-          background: '#f1f3f5',
+          background: '#231942',
           padding: '10px',
-          borderLeft: '1px solid #ccc',
+          borderLeft: '3px solid #9F86C0',
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'center', 
+          textAlign: 'center',
           gap: '10px',
-          zIndex: 20
+          zIndex: 20,
+          color: '#fff'
         }}
       >
+        
+
+        <span style={{ fontSize: '14px', fontWeight: '500', color: '#9F86C0' }}>
+          Zoom: {Math.round(scale * 100)}%
+        </span>
+        <button 
+          onClick={resetZoom}
+          style={{ padding: '6px 6px', cursor: 'pointer' }}
+        >
+          Reset Zoom
+        </button>
+
+        <div style=
+        {{ marginTop: '10px', borderTop: '3px solid #9F86C0', paddingTop: '10px', textAlign: 'center', color: '#fff'}}>
+
         <h3>Animation Controls</h3>
-        <div>
+
+        <div style=
+        {{ marginTop: '20px'}}>
           <button onClick={() => setIsPlaying(!isPlaying)}>
-            {isPlaying ? '⏸️ Pause' : '▶️ Play'}
+            {isPlaying ? '❚❚' : '▶'}
           </button>
           <button onClick={exportGIF} style={{ marginLeft: '5px' }}>
-            💾 Save GIF
+            ⤓ Save GIF
           </button>
         </div>
 
-        <div>
+        <div style=
+        {{ marginTop: '20px'}}>
           <label>FPS: {fps}</label>
           <input
             type="range"
@@ -557,46 +600,49 @@ useEffect(() => {
             style={{ width: '100%' }}
           />
         </div>
+        </div>
 
-        <hr style={{ width: '100%' }} />
+        <hr style={{ width: '100%', marginTop: '20px' }} />
 
         <h3>Frames</h3>
         
-{/* RIGHT ANIMATION PANEL in page.js */}
-<div style={{ marginTop: '10px' }}>
-  <button
-    onClick={toggleOnionSkin}
-    style={{
-      padding: '6px 12px',
-      cursor: 'pointer',
-      backgroundColor: isOnionSkinEnabled ? '#d3f9d8' : '#f1f3f5',
-      border: isOnionSkinEnabled ? '2px solid #2b8a3e' : '1px solid #ccc',
-      borderRadius: '4px',
-      fontWeight: isOnionSkinEnabled ? 'bold' : 'normal'
-    }}
-  >
-    {isOnionSkinEnabled ? '🧅 Onion Skin: ON' : '🧅 Onion Skin: OFF'}
-  </button>
+      {/* RIGHT ANIMATION PANEL */}
+      <div style={{ marginTop: '10px', borderTop: ' #9F86C0' }}>
+        <button
+          onClick={toggleOnionSkin}
+          style={{
+            padding: '6px 12px',
+            cursor: 'pointer',
+            backgroundColor: isOnionSkinEnabled ? '#d3f9d8' : '#f1f3f5',
+            border: isOnionSkinEnabled ? '2px solid #2b8a3e' : '1px solid #ccc',
+            borderRadius: '4px',
+            fontWeight: isOnionSkinEnabled ? 'bold' : 'normal'
+          }}
+        >
+          {isOnionSkinEnabled ? 'Onion Skin: ON ⿻' : 'Onion Skin: OFF ⬚'}
+        </button>
 
-  {/* Color Legend (shown when Onion Skin is ON) */}
-  {isOnionSkinEnabled && (
-    <div style={{ display: 'flex', gap: '12px', marginTop: '8px', fontSize: '12px' }}>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ width: '10px', height: '10px', backgroundColor: '#ff3333', borderRadius: '50%', display: 'inline-block' }} />
-        Previous Frame
-      </span>
-      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        <span style={{ width: '10px', height: '10px', backgroundColor: '#33ff36', borderRadius: '50%', display: 'inline-block' }} />
-        Next Frame
-      </span>
-    </div>
-  )}
-</div>
+        {/* Color Legend (shown when Onion Skin is ON) */}
+        {isOnionSkinEnabled && (
+          <div style={{ display: 'flex', gap: '12px', marginTop: '8px', fontSize: '12px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: '#ff3333', fontSize: '14px', lineHeight: 1 }}>★</span>
+              Previous Frame
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ color: '#33ff36', fontSize: '14px', lineHeight: 1 }}>★</span>
+              Next Frame
+            </span>
+          </div>
+        )}
+      </div>
 
         <div>
-          <button onClick={addFrame}>➕ New Frame</button>
+          <button onClick={addFrame}> 
+          ✚ New Frame
+          </button>
           <button onClick={duplicateFrame} style={{ marginLeft: '5px' }}>
-            📋 Duplicate Frame
+          🗐 Copy Frame 
           </button>
         </div>
 
@@ -613,14 +659,15 @@ useEffect(() => {
                 setCurrentFrameIndex(index);
               }}
               style={{
-                border: index === currentFrameIndex ? '2px solid #339af0' : '1px solid #ccc',
-                background: '#fff',
+                border: index === currentFrameIndex ? '3px solid #f59f00' : '1px solid #ccc',
+                background: index === currentFrameIndex ? ' #fff3bf' : ' #fff',
                 padding: '5px',
                 borderRadius: '4px',
                 cursor: 'grab',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                color: '#231942'
               }}
             >
               <span>Frame {index + 1}</span>
@@ -665,10 +712,37 @@ useEffect(() => {
               boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px'
+              gap: '16px',
+              position: 'relative'
+            }}>
+
+
+            <h3 style={{ margin: 0 }}> Settings </h3>
+
+                      <button
+            onClick={() => {
+              const validW = Math.min(Math.max(canvasWidth, 1), 3500);
+              const validH = Math.min(Math.max(canvasHeight, 1), 3500);
+              setCanvasWidth(validW);
+              setCanvasHeight(validH);
+              setIsSettingsOpen(false);
             }}
+            style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              background: 'transparent',
+              border: 'none',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              color: '#111111',
+              cursor: 'pointer',
+              padding: '4px 8px'
+            }}
+            title="Close"
           >
-            <h3 style={{ margin: 0 }}>⚙️ Settings & Projects</h3>
+            ✕
+          </button>
 
             {/* 1. Canvas Size Adjuster */}
             <div style={{ display: 'flex', gap: '10px' }}>
@@ -727,7 +801,7 @@ useEffect(() => {
                   disabled={savedProjects.length >= 3}
                   style={{ padding: '4px 8px', background: '#2b8a3e', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                 >
-                  💾 Save Current Work
+                  ⎙ Save Work
                 </button>
               </div>
 
@@ -808,28 +882,6 @@ useEffect(() => {
               )}
             </div>
 
-            {/* Close Modal Button */}
-            <button
-              onClick={() => {
-                const validW = Math.min(Math.max(canvasWidth, 1), 3500);
-                const validH = Math.min(Math.max(canvasHeight, 1), 3500);
-                setCanvasWidth(validW);
-                setCanvasHeight(validH);
-                setIsSettingsOpen(false);
-              }}
-              style={{
-                marginTop: '8px',
-                padding: '10px',
-                backgroundColor: '#339af0',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontWeight: 'bold'
-              }}
-            >
-              Close Settings
-            </button>
           </div>
         </div>
       )}
