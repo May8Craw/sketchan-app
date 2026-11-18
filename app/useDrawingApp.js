@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { GifWriter } from 'omggif';
 
 export const CHAR_LIMIT = 20;
-export const TOOLBAR_MIN_SIZE = 300;
+export const TOOLBAR_MIN_SIZE = 370;
 export const TOOLBAR_MAX_SIZE = 450;
 const FILL_TOLERANCE = 200; // Increase this if gaps are wider, lower it if it leaks too far
 
