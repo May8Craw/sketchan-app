@@ -271,22 +271,25 @@ useEffect(() => {
           zIndex: 20
         }}>
 
+
+        <div className="divdiv">
         {/* Settings Pop-up */}
-        <div style={{ marginTop: '10px'}}>
-        <button
-        onClick={() => setIsSettingsOpen(true)}
-        style={{
-          padding: '5px 10px',
-          cursor: 'pointer',
-          backgroundColor: '#f8f9fa',
-          border: '1px solid #ccc',
-          borderRadius: '4px'
-        }}>
-        🌣
+        <div>
+          <button
+          onClick={() => setIsSettingsOpen(true)}
+          style={{
+            padding: '5px 6px',
+            cursor: 'pointer',
+            backgroundColor: '#f8f9fa',
+            border: '1px solid #ccc',
+            borderRadius: '4px'
+          }}>
+          <img src="../images/gear.png" alt="Gear" width="24" height="24"></img>
         </button>
 
-        <label style={{ backgroundColor: '#231942', fontFamily: 'Mansalva', textAlign: 'center', color: '#fff', fontSize: '35px' }}>˚⋆ Sketch</label>
-        <label style={{ backgroundColor: '#231942', fontFamily: 'Mansalva', textAlign: 'center', color: '#fee2ff', fontSize: '35px' }}>An ⋆˚</label>
+        <label style={{ fontFamily: 'Mansalva', textAlign: 'center', color: '#fff', fontSize: '35px' }}>˚⋆ Sketch</label>
+        <label style={{ fontFamily: 'Mansalva', textAlign: 'center', color: '#fee2ff', fontSize: '35px' }}>An ⋆˚</label>
+        </div>
 
         </div>
      
@@ -344,23 +347,26 @@ useEffect(() => {
 
         </div>
 
-        <div style={{ marginTop: '10px', color: '#FFF' }}>
-          <label>Brush Size </label>
+
+        <div style={{ marginTop: '10px', color: '#FFF', alignItems : 'center', textAlign: 'center' }}>
+          <label>Brush Size: {brushSize} </label>
+          <div style={{ marginTop: '10px'}}>
           <input
-            type="number"
+            type="range"
             min="1"
-            max="50"
+            max="100"
             value={brushSize}
-            onChange={(e) => setBrushSize(Number(e.target.value))}
-          />
+            onChange={(e) => setBrushSize(Number(e.target.value))}/>
+          </div>
         </div>
 
-        <div style={{ marginTop: '10px', color: '#FFF' }}>
+        <div style={{ marginTop: '10px', color: '#FFF', alignItems : 'center', textAlign: 'center' }}>
           <label>Brush Color </label>
           <input type="color" value={color} onChange={(e) => setColor(e.target.value)} />
         </div>
 
-          <div 
+
+        <div 
         style={{ 
           marginTop: '15px', 
           borderTop: '3px solid #231942', 
@@ -368,9 +374,11 @@ useEffect(() => {
           display: 'flex', 
           flexDirection: 'column', 
           alignItems: 'center', 
-          textAlign: 'center' 
-        }}
-      >
+          textAlign: 'center',
+          backgroundColor: '9F86C0'
+        }}>
+          
+        <div className= "divdiv">
         <h3 style={{ color: '#FFF' }}>Palette Generator</h3>
         <h4 style={{ margin: '0 0 8px 0', color: '#FFF' }}>(Huemint API)</h4>
 
@@ -401,60 +409,102 @@ useEffect(() => {
             />
           ))}
         </div>
+        </div>
       </div>
 
     <div style={{ marginTop: '15px', borderTop: '3px solid #231942', paddingTop: '10px', textAlign: 'center', color: '#FFF' }}>
-        <h3>Layers</h3>
-        <button onClick={addLayer} disabled={layers.length >= 10}>
-          + New Layer
+  <h3>Layers</h3>
+  <button onClick={addLayer} disabled={layers.length >= 10}>
+    + New Layer
+  </button>
+
+  <ul style={{ listStyle: 'none', padding: 0 }}>
+    {layers.map((layer, index) => (
+      <li
+        key={layer.id}
+        onClick={() => setActiveLayer(index)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          backgroundColor: index === activeLayer ? '#fff3bf' : 'transparent',
+          border: index === activeLayer ? '2px solid #f59f00' : '1px solid transparent',
+          padding: '4px',
+          cursor: 'pointer',
+          borderRadius: '4px',
+          marginTop: '4px'
+        }}
+      >
+        {/* Drag Handle Icon - Only dragging this icon moves the layer */}
+        <span
+          draggable
+          onDragStart={(e) => {
+            e.stopPropagation(); // Prevent triggering selection on drag start
+            handleDragStart(index);
+          }}
+          onDragEnter={(e) => {
+            e.stopPropagation();
+            handleDragEnter(index);
+          }}
+          onDragEnd={(e) => {
+            e.stopPropagation();
+            handleDrop();
+          }}
+          style={{ cursor: 'grab', marginRight: '6px', fontSize: '14px', userSelect: 'none' }}
+          title="Drag to reorder"
+        >
+          <img src="../images/move.png" alt="Move Icon" width="24" height="24"></img>
+        </span>
+
+        {/* Layer Name Input */}
+        <input
+          type="text"
+          value={layer.name}
+          onChange={(e) => renameLayer(index, e.target.value)}
+          onClick={(e) => e.stopPropagation()} 
+          style={{ flex: 1, marginLeft: '5px' }}
+        />
+
+        {/* Visibility Eye Icon Button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleVisibility(index);
+          }}
+          style={{
+            padding: '5px 6px',
+            cursor: 'pointer',
+            backgroundColor: '#f8f9fa',
+            border: '1px solid #ccc',
+            borderRadius: '4px'
+          }}
+          title={layer.visible ? "Hide layer" : "Show layer"}
+        >
+          {layer.visible ? '👁' : '◡'}
         </button>
 
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {layers.map((layer, index) => (
-            <li
-              key={layer.id}
-              draggable
-              onDragStart={() => handleDragStart(index)}
-              onDragEnter={() => handleDragEnter(index)}
-              onDragEnd={handleDrop}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                backgroundColor: index === activeLayer ? '#fff3bf' : 'transparent',
-                border: index === activeLayer ? '2px solid #f59f00' : '1px solid transparent',
-                padding: '4px',
-                cursor: 'grab',
-                borderRadius: '4px',
-                marginTop: '4px'
-              }}
-            >
-              <input
-                type="radio"
-                checked={index === activeLayer}
-                onChange={() => setActiveLayer(index)}
-              />
-              <input
-                type="text"
-                value={layer.name}
-                onChange={(e) => renameLayer(index, e.target.value)}
-                style={{ flex: 1, marginLeft: '5px' }}
-              />
-              <input
-                type="checkbox"
-                checked={layer.visible}
-                onChange={() => toggleVisibility(index)}
-              />
-              <button
-                onClick={() => removeLayer(index)}
-                disabled={layers.length === 1}
-                style={{ marginLeft: '5px' }}
-              >
-                🗑️
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+        {/* Delete Button */}
+        <button 
+          style={{
+            padding: '5px 6px',
+            cursor: 'pointer',
+            backgroundColor: '#f8f9fa',
+            border: '1px solid #ccc',
+            borderRadius: '4px'
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            removeLayer(index);
+          }}
+          disabled={layers.length === 1}
+          title="Delete layer"
+        >
+          <img src="../images/trash.png" alt="Trash" width="24" height="24"></img>
+        </button>
+      </li>
+    ))}
+  </ul>
+</div>
     </div>
 
       {/* RESIZE LEFT TOOLBAR HANDLE */}
@@ -559,8 +609,7 @@ useEffect(() => {
           gap: '10px',
           zIndex: 20,
           color: '#fff'
-        }}
-      >
+        }}>
         
 
         <span style={{ fontSize: '14px', fontWeight: '500', color: '#9F86C0' }}>
@@ -573,8 +622,7 @@ useEffect(() => {
           Reset Zoom
         </button>
 
-        <div style=
-        {{ marginTop: '10px', borderTop: '3px solid #9F86C0', paddingTop: '10px', textAlign: 'center', color: '#fff'}}>
+        <div className= 'lightdiv'>
 
         <h3>Animation Controls</h3>
 
@@ -606,7 +654,6 @@ useEffect(() => {
 
         <h3>Frames</h3>
         
-      {/* RIGHT ANIMATION PANEL */}
       <div style={{ marginTop: '10px', borderTop: ' #9F86C0' }}>
         <button
           onClick={toggleOnionSkin}
