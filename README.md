@@ -63,7 +63,7 @@ While Sketchan allows you to save GIFs of your animation, the gifs themselves ma
 
 2) To address my second limitation, I would like to make it so that you can move the canvas anywhere you want (including rotating the canvas) without having the canvas stuck in the top left corner. This is something that is often done for every drawing software I have utilized, and I tend to appreciate the freedom this feature gives the user. Furthermore, I would love for you to be able to reset the canvas back to an original/default position, much like the zoom feature I already have.
 
-3) I really want to continue working on the visual design of SketchAn. There were a few things that I was unsure how to do without messing up something else in the program that I think would make the user interface simpler and more organized, so I would want to keep tweaking this design until it's at a place where tweaks seem unnecessary.
+3) I really want to continue working on the visual design of SketchAn. There were a few things that I was unsure how to do without messing up something else in the program that I think would make the user interface simpler and more organized (as well as resembling the Figma Prototype more), so I would want to keep tweaking this design until it's at a place where tweaks seem unnecessary.
 
 
 
